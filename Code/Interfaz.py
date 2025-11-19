@@ -59,11 +59,11 @@ class AppEasyRoute:
 
     def cargar_imagen_mapa(self):
         """
-        Carga la imagen 'mapa_Provicional.jpg' y la pone en el Canvas.
+        Carga la imagen 'Mapa.png' y la pone en el Canvas.
         """
         try:
             # Abrimos la imagen
-            img_original = Image.open("img\mapa_Provisional.png")
+            img_original = Image.open("img\Mapa.png")
             
             # (Opcional) Ajustamos el tamaño si es muy grande, por ahora la dejamos original
             # img_original = img_original.resize((750, 750), Image.LANCZOS)
@@ -75,7 +75,7 @@ class AppEasyRoute:
             self.canvas_mapa.create_image(0, 0, anchor="nw", image=self.img_tk)
             
         except FileNotFoundError:
-            self.canvas_mapa.create_text(300, 300, text="Error: No se encontró 'mapa_Provicional.png'", fill="red", font=("Helvetica", 12))
+            self.canvas_mapa.create_text(300, 300, text="Error: No se encontró 'Mapa.png'", fill="red", font=("Helvetica", 12))
         except Exception as e:
             self.canvas_mapa.create_text(300, 300, text=f"Error al cargar imagen: {e}", fill="red", font=("Helvetica", 12))
 
