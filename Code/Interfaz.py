@@ -14,13 +14,16 @@ class AppEasyRoute:
         self.ruta_actual = []
         self.nodo_origen_clic = None
         self.nodo_destino_clic = None
-        self.modo_seleccion = "origen"
         
-        # VARIABLE PARA EL MODO DE TRANSPORTE
+        # --- NUEVO: VARIABLE PARA CONTROLAR QUÉ MARCAMOS CON EL CLIC ---
+        # Valores posibles: "origen" o "destino"
+        self.modo_marcado = tk.StringVar(value="origen") 
+        
+        # Variable para auto/caminar
         self.modo_transporte = tk.StringVar(value="caminar") 
 
         self.root.title("EasyRoute - Navegación")
-        self.root.geometry("1000x700")
+        self.root.geometry("1000x750") # Un poco más alto para que quepan los botones
         self.factor_escala = 1.0
         self.offset_x = 0
         self.offset_y = 0
@@ -38,21 +41,28 @@ class AppEasyRoute:
         self.frame_controles.pack(side="left", fill="y")
         
         ttk.Label(self.frame_controles, text="EasyRoute", font=("Helvetica", 20, "bold")).pack(pady=10)
-        self.lbl_instruccion = ttk.Label(self.frame_controles, text="Clic en mapa para Origen", foreground="blue")
-        self.lbl_instruccion.pack(pady=5)
 
-        # Origen / Destino
-        ttk.Label(self.frame_controles, text="📍 Origen:").pack(anchor="w")
+        # --- SECCIÓN 1: QUÉ QUIERES MARCAR ---
+        # Aquí eliges si tu próximo clic será el punto A o el punto B
+        labelframe_marcado = ttk.LabelFrame(self.frame_controles, text="¿Qué deseas marcar?", padding=10)
+        labelframe_marcado.pack(fill="x", pady=10)
+        
+        ttk.Radiobutton(labelframe_marcado, text="📍 Fijar Origen", variable=self.modo_marcado, value="origen").pack(anchor="w", pady=2)
+        ttk.Radiobutton(labelframe_marcado, text="🏁 Fijar Destino", variable=self.modo_marcado, value="destino").pack(anchor="w", pady=2)
+
+        # --- SECCIÓN 2: SELECCIÓN Y TEXTO ---
+        ttk.Label(self.frame_controles, text="Ubicación Origen:").pack(anchor="w", pady=(10,0))
         self.combo_origen = ttk.Combobox(self.frame_controles, values=self.lista_lugares_visibles, state="readonly")
         self.combo_origen.pack(pady=5, fill="x")
-        self.combo_origen.bind("<<ComboboxSelected>>", lambda e: self.resetear_clic("origen"))
+        # Si seleccionan del menú, borramos el pin manual
+        self.combo_origen.bind("<<ComboboxSelected>>", lambda e: self.resetear_pin_manual("origen"))
 
-        ttk.Label(self.frame_controles, text="🏁 Destino:").pack(anchor="w")
+        ttk.Label(self.frame_controles, text="Ubicación Destino:").pack(anchor="w")
         self.combo_destino = ttk.Combobox(self.frame_controles, values=self.lista_lugares_visibles, state="readonly")
         self.combo_destino.pack(pady=5, fill="x")
-        self.combo_destino.bind("<<ComboboxSelected>>", lambda e: self.resetear_clic("destino"))
+        self.combo_destino.bind("<<ComboboxSelected>>", lambda e: self.resetear_pin_manual("destino"))
         
-        # --- RADIO BUTTONS (AUTO / CAMINAR) ---
+        # --- SECCIÓN 3: MODO TRANSPORTE ---
         ttk.Label(self.frame_controles, text="Modo de Transporte:", font=("Arial", 10, "bold")).pack(pady=(15, 5))
         frame_radios = ttk.Frame(self.frame_controles)
         frame_radios.pack(fill="x", padx=10)
@@ -62,9 +72,9 @@ class AppEasyRoute:
         # Botones Acción
         self.btn_buscar = ttk.Button(self.frame_controles, text="Calcular Ruta", command=self.buscar_ruta_presionado)
         self.btn_buscar.pack(pady=20, fill="x")
-        ttk.Button(self.frame_controles, text="Limpiar", command=self.limpiar_todo).pack(pady=5, fill="x")
+        ttk.Button(self.frame_controles, text="Limpiar Todo", command=self.limpiar_todo).pack(pady=5, fill="x")
 
-        self.lbl_resultado = ttk.Label(self.frame_controles, text="Esperando...", wraplength=230)
+        self.lbl_resultado = ttk.Label(self.frame_controles, text="Selecciona modo y haz clic en el mapa.", wraplength=230)
         self.lbl_resultado.pack(fill="x")
 
         # --- Mapa ---
@@ -76,7 +86,8 @@ class AppEasyRoute:
         self.canvas_mapa.bind('<Configure>', self.actualizar_mapa)
         self.canvas_mapa.bind('<Button-1>', self.manejar_clic_mapa)
 
-    def resetear_clic(self, tipo):
+    def resetear_pin_manual(self, tipo):
+        """Si eligen del menú desplegable, quitamos el pin manual del mapa"""
         if tipo == "origen": self.nodo_origen_clic = None
         elif tipo == "destino": self.nodo_destino_clic = None
         self.redibujar_todo()
@@ -87,60 +98,68 @@ class AppEasyRoute:
         self.ruta_actual = []
         self.combo_origen.set('')
         self.combo_destino.set('')
-        self.modo_seleccion = "origen"
-        self.lbl_instruccion.config(text="Clic para fijar Origen", foreground="blue")
         self.lbl_resultado.config(text="")
         self.redibujar_todo()
+
+    def manejar_clic_mapa(self, event):
+        """
+        Este método ahora obedece a lo que hayas seleccionado en los RadioButtons
+        """
+        try:
+            rx = int((event.x - self.offset_x) / self.factor_escala)
+            ry = int((event.y - self.offset_y) / self.factor_escala)
+        except: return
+
+        # 1. Buscar nodo cercano
+        nodo, dist = self.mapa.obtener_nodo_mas_cercano(rx, ry)
+        if not nodo: return
+
+        # 2. VERIFICAR QUÉ ESTAMOS MARCANDO (Origen o Destino)
+        accion = self.modo_marcado.get()
+
+        if accion == "origen":
+            self.nodo_origen_clic = nodo
+            self.combo_origen.set(f"📍 {nodo}")
+            # Opcional: Cambiar automáticamente al siguiente modo para agilizar
+            # self.modo_marcado.set("destino") 
+        
+        elif accion == "destino":
+            self.nodo_destino_clic = nodo
+            self.combo_destino.set(f"🏁 {nodo}")
+
+        # Redibujamos para que aparezca el pin (Verde o Rojo)
+        self.redibujar_todo()
+
+        # Si ya tenemos los dos, calculamos ruta automáticamente (opcional)
+        origen = self.nodo_origen_clic if self.nodo_origen_clic else self.combo_origen.get()
+        destino = self.nodo_destino_clic if self.nodo_destino_clic else self.combo_destino.get()
+        
+        if origen and destino:
+             self.buscar_ruta_presionado()
+
 
     def buscar_ruta_presionado(self):
         origen = self.nodo_origen_clic if self.nodo_origen_clic else self.combo_origen.get()
         destino = self.nodo_destino_clic if self.nodo_destino_clic else self.combo_destino.get()
         
         if not origen or not destino:
-            messagebox.showwarning("Atención", "Faltan puntos.")
-            return
+            return # No mostramos error, solo esperamos
         
         modo = self.modo_transporte.get()
         ruta, costo = self.mapa.dijkstra(origen, destino, modo_transporte=modo)
 
         if not ruta:
             if modo == "auto" and ("Parque" in destino or "Picnic" in destino):
-                msg = "⛔ El auto no puede entrar al Parque."
+                msg = "⛔ Auto prohibido en Parque."
             else:
-                msg = "❌ No hay camino disponible."
-            
+                msg = "❌ Ruta no encontrada."
             self.lbl_resultado.config(text=msg)
             self.ruta_actual = []
-            self.redibujar_todo()
-            return
-
-        self.ruta_actual = ruta
-        texto_resumen = " ➝ ".join(ruta)
-        if len(ruta) > 4: texto_resumen = f"{ruta[0]} ... ({len(ruta)}) ... {ruta[-1]}"
-        
-        self.lbl_resultado.config(text=f"✅ Ruta {modo.upper()} ({costo:.0f}):\n{texto_resumen}")
-        self.redibujar_todo()
-
-    def manejar_clic_mapa(self, event):
-        try:
-            rx = int((event.x - self.offset_x) / self.factor_escala)
-            ry = int((event.y - self.offset_y) / self.factor_escala)
-        except: return
-
-        nodo, dist = self.mapa.obtener_nodo_mas_cercano(rx, ry)
-        if not nodo: return
-
-        if self.modo_seleccion == "origen":
-            self.nodo_origen_clic = nodo
-            self.combo_origen.set(f"📍 {nodo}")
-            self.modo_seleccion = "destino"
-            self.lbl_instruccion.config(text="Ahora clic para Destino", foreground="red")
         else:
-            self.nodo_destino_clic = nodo
-            self.combo_destino.set(f"🏁 {nodo}")
-            self.modo_seleccion = "origen"
-            self.lbl_instruccion.config(text="¡Calculando!", foreground="green")
-            self.buscar_ruta_presionado()
+            self.ruta_actual = ruta
+            texto_resumen = " ➝ ".join(ruta)
+            if len(ruta) > 4: texto_resumen = f"Inicio... ({len(ruta)} pasos) ... Fin"
+            self.lbl_resultado.config(text=f"✅ Ruta {modo.upper()} ({costo:.0f}):\n{texto_resumen}")
         
         self.redibujar_todo()
 
@@ -164,7 +183,7 @@ class AppEasyRoute:
             fx, fy = (bx*self.factor_escala)+self.offset_x, (by*self.factor_escala)+self.offset_y
             self.canvas_mapa.create_oval(fx-4, fy-4, fx+4, fy+4, fill="#FF9500", outline="white", width=2)
 
-        # --- RUTA SUAVE (SOLUCIÓN AL PROBLEMA DE LAS FLECHAS) ---
+        # Ruta Suave
         if self.ruta_actual and len(self.ruta_actual) > 1:
             coordenadas_ruta = []
             for nodo in self.ruta_actual:
@@ -173,14 +192,10 @@ class AppEasyRoute:
                 final_y = (raw_y * self.factor_escala) + self.offset_y
                 coordenadas_ruta.extend([final_x, final_y])
             
-            # Dibujamos una sola línea continua (Polyline)
             self.canvas_mapa.create_line(
                 *coordenadas_ruta, 
-                fill="#007AFF", 
-                width=5, 
-                arrow=tk.LAST, # Flecha solo al final
-                capstyle=tk.ROUND, 
-                joinstyle=tk.ROUND
+                fill="#007AFF", width=5, arrow=tk.LAST, 
+                capstyle=tk.ROUND, joinstyle=tk.ROUND
             )
 
         # Pines de clic

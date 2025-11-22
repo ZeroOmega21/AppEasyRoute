@@ -10,8 +10,10 @@ def cargar_mapa():
     
     todos_los_nodos = []
 
-    # 1. CARGAR CALLES
+    # 1. CARGAR CALLES Y DEFINIR ZONAS (PEATONAL VS UNIVERSAL)
     for nombre_grupo, lista_coords in COORDENADAS_CALLES.items():
+        
+        # Detectar si es zona verde (Parque/Picnic)
         es_zona_verde = "Parque" in nombre_grupo or "Picnic" in nombre_grupo
         tipo_via = "peatonal" if es_zona_verde else "universal"
 
@@ -22,35 +24,50 @@ def cargar_mapa():
             nodos_calle.append(nombre_nodo)
             todos_los_nodos.append({"nombre": nombre_nodo, "x": x, "y": y, "grupo": nombre_grupo})
 
+        # Conectar nodos internos de la calle
         for i in range(len(nodos_calle) - 1):
             mapa.agregar_arista_doble_sentido(nodos_calle[i], nodos_calle[i+1], peso=10, tipo=tipo_via)
 
-    # 2. CARGAR LUGARES VIP
+    # 2. CARGAR LUGARES VIP (Lugares de Interés)
     for nombre_lugar, (x, y) in LUGARES_INTERES.items():
         mapa.agregar_nodo(nombre_lugar, x=x, y=y)
+        # Los marcamos como grupo 'LUGAR_VIP'
         todos_los_nodos.append({"nombre": nombre_lugar, "x": x, "y": y, "grupo": "LUGAR_VIP"})
 
-    # 3. CONEXIÓN AUTOMÁTICA
-    print("--- Conectando cruces ---")
+    # 3. CONEXIÓN AUTOMÁTICA INTELIGENTE (Opción B)
+    print("--- Conectando cruces y accesos ---")
     
-    # --- SOLUCIÓN AL PROBLEMA DE NODOS QUE SE TOPAN INDEBIDAMENTE ---
-    # Bajamos el umbral de 60 a 35. 
-    # Como tus puntos están muy seguidos, 60 era demasiado grande y saltaba veredas.
-    UMBRAL_CONEXION = 35 
+    # Radio pequeño para calles (evita saltos de vereda)
+    UMBRAL_CALLES = 35 
+    # Radio grande para lugares (facilita el acceso)
+    UMBRAL_LUGARES = 80 
+
+    count_conexiones = 0
 
     for i in range(len(todos_los_nodos)):
         nodo_a = todos_los_nodos[i]
         for j in range(i + 1, len(todos_los_nodos)):
             nodo_b = todos_los_nodos[j]
 
+            # Regla 1: No conectar nodos del mismo grupo (ej: Calle1_0 con Calle1_5)
+            # EXCEPTO si uno es VIP (queremos que se conecte a todo lo cercano)
             if nodo_a["grupo"] == nodo_b["grupo"] and nodo_a["grupo"] != "LUGAR_VIP":
                 continue
 
+            # Regla 2: Decidir qué radio usar (Dinámico)
+            es_vip = (nodo_a["grupo"] == "LUGAR_VIP" or nodo_b["grupo"] == "LUGAR_VIP")
+            radio_limite = UMBRAL_LUGARES if es_vip else UMBRAL_CALLES
+
+            # Cálculo de distancia
             distancia = math.sqrt((nodo_a["x"] - nodo_b["x"])**2 + (nodo_a["y"] - nodo_b["y"])**2)
 
-            if distancia < UMBRAL_CONEXION:
+            # Regla 3: Si está dentro del radio, conectar
+            if distancia < radio_limite:
+                # Las conexiones de acceso son universales
                 mapa.agregar_arista_doble_sentido(nodo_a["nombre"], nodo_b["nombre"], peso=5, tipo="universal")
+                count_conexiones += 1
     
+    print(f"--- Mapa listo: {count_conexiones} conexiones generadas ---")
     return mapa
 
 if __name__ == "__main__":

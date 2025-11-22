@@ -105,7 +105,7 @@ LUGARES_INTERES = {
     # Nombre visible         : (x, y)
     "Escuela Central"        : (1185, 979),  
     "Supermercado El Lider"  : (1314, 885),   
-    "Hospital General"       : (1558, 209),  
+    "Hospital General"       : (1558, 180),  
     "Municipalidad"          : (502, 976),  
     "Lago"                   : (2197, 875),     
     "Entrada Parque Sur"     : (2183, 1007),
