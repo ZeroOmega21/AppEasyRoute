@@ -119,3 +119,9 @@ LUGARES_INTERES = {
     "Entrada Parque Sur"         : (2185, 1012), 
     "Entrada Parque Norte"       : (2191, 924), 
 }
+
+DICCIONARIO_SENTIDOS = {
+    "Av_Suarez":        "ABAJO",  # Sentido Sur
+    "Av_Independencia": "ARRIBA", # Sentido Norte
+    "Camino_del_Este":  "ARRIBA"  # Sentido Norte
+}

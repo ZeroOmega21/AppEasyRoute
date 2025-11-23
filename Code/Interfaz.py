@@ -3,19 +3,20 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk 
 import os
 import math 
-# from utilidades import obtener_info_coordenada
+#from utilidades import obtener_info_coordenada
 
 class AppEasyRoute:
     def __init__(self, root, mapa, lugares_dict):
         self.root = root
         self.mapa = mapa 
-        self.lugares_vip_coords = lugares_dict
-        self.lista_lugares_visibles = sorted(list(self.lugares_vip_coords.keys()))
+        
+        # --- CAMBIO DE NOMBRE DE VARIABLE ---
+        self.lugares_interes_coords = lugares_dict
+        self.lista_lugares_visibles = sorted(list(self.lugares_interes_coords.keys()))
         
         self.ruta_actual = []
         self.nodo_origen_clic = None
         self.nodo_destino_clic = None
-        
         self.modo_marcado = tk.StringVar(value="origen") 
         self.modo_transporte = tk.StringVar(value="caminar") 
 
@@ -25,7 +26,6 @@ class AppEasyRoute:
         self.offset_x = 0
         self.offset_y = 0
 
-        # Carga Imagen
         try:
             self.img_original = Image.open(os.path.join("img", "Mapa.png"))
             self.ancho_base, self.alto_base = self.img_original.size
@@ -33,7 +33,7 @@ class AppEasyRoute:
             self.img_original = Image.new("RGB", (800, 600), "white")
             self.ancho_base, self.alto_base = (800, 600)
 
-        # Panel Izquierdo
+        # --- Panel Izquierdo ---
         self.frame_controles = ttk.Frame(self.root, width=250, padding="10")
         self.frame_controles.pack(side="left", fill="y")
         
@@ -72,15 +72,9 @@ class AppEasyRoute:
         self.canvas_mapa = tk.Canvas(self.frame_mapa, bg="#333333") 
         self.canvas_mapa.pack(fill="both", expand=True)
         
-        # --- EVENTOS ---
         self.canvas_mapa.bind('<Configure>', self.actualizar_mapa)
-        
-        # Clic IZQUIERDO: Navegación (Usuario normal)
         self.canvas_mapa.bind('<Button-1>', self.manejar_clic_mapa)
-        
-        # Clic DERECHO: Utilidad de Desarrollo
         # self.canvas_mapa.bind('<Button-3>', self.al_hacer_clic_derecho)
-
 
     # --- MÉTODO PARA CLIC DERECHO ---
     # def al_hacer_clic_derecho(self, event):
@@ -104,8 +98,10 @@ class AppEasyRoute:
     #         self.canvas_mapa.delete("debug_point") # Borra el anterior
     #         self.canvas_mapa.create_oval(fx-3, fy-3, fx+3, fy+3, fill="magenta", outline="white", tags="debug_point")
 
+
     def formatear_nombre_visual(self, nombre_interno):
-        if nombre_interno in self.lugares_vip_coords: return nombre_interno
+        # --- CAMBIO DE NOMBRE AQUÍ ---
+        if nombre_interno in self.lugares_interes_coords: return nombre_interno
         partes = nombre_interno.split('_') 
         if partes and partes[-1].isdigit(): partes.pop() 
         return " ".join(partes)
@@ -149,7 +145,7 @@ class AppEasyRoute:
         if origen and destino: self.buscar_ruta_presionado()
 
     def calcular_distancia_total(self, ruta):
-        METROS_POR_PIXEL = 2.5 
+        METROS_POR_PIXEL = 0.5 
         dist_total_px = 0
         for i in range(len(ruta)-1):
             na, nb = ruta[i], ruta[i+1]
@@ -193,7 +189,6 @@ class AppEasyRoute:
         self.factor_escala = ratio
         nw, nh = int(self.ancho_base * ratio), int(self.alto_base * ratio)
         self.offset_x, self.offset_y = (w - nw) // 2, (h - nh) // 2
-        
         self.img_tk = ImageTk.PhotoImage(self.img_original.resize((nw, nh), Image.Resampling.LANCZOS))
         self.redibujar_todo()
 
@@ -201,9 +196,11 @@ class AppEasyRoute:
         self.canvas_mapa.delete("all")
         self.canvas_mapa.create_image(self.offset_x, self.offset_y, anchor="nw", image=self.img_tk)
 
-        for n, (bx, by) in self.lugares_vip_coords.items():
+        # --- CAMBIO DE NOMBRE AQUÍ ---
+        for n, (bx, by) in self.lugares_interes_coords.items():
             fx, fy = (bx*self.factor_escala)+self.offset_x, (by*self.factor_escala)+self.offset_y
-            self.canvas_mapa.create_oval(fx-4, fy-4, fx+4, fy+4, fill="#FF9500", outline="white", width=2)
+            # Cambio de tag: 'marcador_interes'
+            self.canvas_mapa.create_oval(fx-4, fy-4, fx+4, fy+4, fill="#FF9500", outline="white", width=2, tags="marcador_interes")
 
         if self.ruta_actual and len(self.ruta_actual) > 1:
             coords = []
