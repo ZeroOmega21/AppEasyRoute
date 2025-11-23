@@ -40,7 +40,7 @@ class Grafo:
         return nodo_mas_cercano, distancia_minima
 
     def dijkstra(self, nodo_inicio, nodo_fin, modo_transporte="caminar"):
-        # --- VELOCIDADES EN METROS POR MINUTO ---
+        # VELOCIDADES EN METROS POR MINUTO
         # Caminar promedio: 5 km/h = 83 m/min
         # Auto ciudad: 40 km/h = 666 m/min
         VELOCIDAD_CAMINAR = 83.0  

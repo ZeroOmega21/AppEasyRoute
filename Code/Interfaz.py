@@ -3,16 +3,28 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk 
 import os
 import math 
-
-# --- IMPORTACIÓN DE LA NUEVA UTILIDAD (COMENTADA) ---
+import sys  #NECESARIA PARA EL EXE
 # from utilidades import obtener_info_coordenada
+
+# --- 2. FUNCIÓN AUXILIAR PARA RUTAS EN EL EXE ---
+def resolver_ruta(ruta_relativa):
+    """ 
+    Devuelve la ruta absoluta correcta a los recursos.
+    Funciona tanto en desarrollo (código fuente) como en el .exe compilado.
+    """
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller crea una carpeta temporal _MEIPASS donde descomprime todo
+        return os.path.join(sys._MEIPASS, ruta_relativa)
+    
+    # En desarrollo normal, busca en la carpeta actual
+    return os.path.join(os.path.abspath("."), ruta_relativa)
 
 class AppEasyRoute:
     def __init__(self, root, mapa, lugares_dict):
         self.root = root
         self.mapa = mapa 
         
-        # --- 1. CONFIGURACIÓN DE ESTILO Y TEMA ---
+        # CONFIGURACIÓN DE ESTILO Y TEMA ---
         self.estilo = ttk.Style()
         self.estilo.theme_use('clam') # Tema más moderno y limpio
         
@@ -49,11 +61,15 @@ class AppEasyRoute:
         self.offset_x = 0
         self.offset_y = 0
 
-        # Carga Imagen
+        # --- 3. CARGA DE IMAGEN (USANDO resolver_ruta) ---
         try:
-            self.img_original = Image.open(os.path.join("img", "Mapa.png"))
+            # Usamos la función para encontrar la ruta correcta del mapa
+            ruta_mapa_real = resolver_ruta(os.path.join("img", "Mapa.png"))
+            self.img_original = Image.open(ruta_mapa_real)
             self.ancho_base, self.alto_base = self.img_original.size
-        except:
+        except Exception as e:
+            print(f"Error cargando imagen: {e}")
+            # Imagen de respaldo (blanca)
             self.img_original = Image.new("RGB", (800, 600), "white")
             self.ancho_base, self.alto_base = (800, 600)
 

@@ -15,9 +15,7 @@ def cargar_mapa():
     METROS_POR_PIXEL = 0.5 
     todos_los_nodos = []
 
-    # ==========================================
     # 1. CARGAR CALLES
-    # ==========================================
     for nombre_grupo, lista_coords in COORDENADAS_CALLES.items():
         
         tipo_via = "peatonal" if es_zona_protegida(nombre_grupo) else "universal"
@@ -39,17 +37,13 @@ def cargar_mapa():
             escala_metros=METROS_POR_PIXEL
         )
 
-    # ==========================================
-    # 2. CARGAR PUNTOS DE INTERÉS (Antes LUGARES VIP)
-    # ==========================================
+    # 2. CARGAR PUNTOS DE INTERÉS
     for nombre_lugar, (x, y) in LUGARES_INTERES.items():
         mapa.agregar_nodo(nombre_lugar, x=x, y=y)
         # --- CAMBIO DE NOMBRE AQUÍ ---
         todos_los_nodos.append({"nombre": nombre_lugar, "x": x, "y": y, "grupo": "PUNTO_INTERES"})
 
-    # ==========================================
     # 3. CONEXIÓN INTELIGENTE
-    # ==========================================
     conectar_cruces_inteligentes(mapa, todos_los_nodos, METROS_POR_PIXEL)
     
     return mapa
