@@ -3,35 +3,21 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk 
 import os
 import math 
-import sys  #NECESARIA PARA EL EXE
 # from utilidades import obtener_info_coordenada
-
-# --- 2. FUNCIÓN AUXILIAR PARA RUTAS EN EL EXE ---
-def resolver_ruta(ruta_relativa):
-    """ 
-    Devuelve la ruta absoluta correcta a los recursos.
-    Funciona tanto en desarrollo (código fuente) como en el .exe compilado.
-    """
-    if hasattr(sys, '_MEIPASS'):
-        # PyInstaller crea una carpeta temporal _MEIPASS donde descomprime todo
-        return os.path.join(sys._MEIPASS, ruta_relativa)
-    
-    # En desarrollo normal, busca en la carpeta actual
-    return os.path.join(os.path.abspath("."), ruta_relativa)
 
 class AppEasyRoute:
     def __init__(self, root, mapa, lugares_dict):
         self.root = root
         self.mapa = mapa 
         
-        # CONFIGURACIÓN DE ESTILO Y TEMA ---
+        # CONFIGURACIÓN DE ESTILO Y TEMA 
         self.estilo = ttk.Style()
-        self.estilo.theme_use('clam') # Tema más moderno y limpio
+        self.estilo.theme_use('clam') 
         
         # Paleta de Colores
-        BG_PANEL = "#f0f2f5" # Gris muy claro para el panel
-        BG_CARD = "white"    # Blanco para tarjetas
-        ACCENT_COLOR = "#007AFF" # Azul iOS
+        BG_PANEL = "#f0f2f5" 
+        BG_CARD = "white"    
+        ACCENT_COLOR = "#007AFF" 
         TEXT_COLOR = "#333333"
         
         self.root.configure(bg=BG_PANEL)
@@ -45,7 +31,7 @@ class AppEasyRoute:
         self.estilo.configure("TButton", font=("Segoe UI", 10, "bold"), background="#e1e1e1")
         self.estilo.map("TButton", background=[("active", "#d0d0d0")])
 
-        # --- DATOS ---
+        # DATOS
         self.lugares_interes_coords = lugares_dict
         self.lista_lugares_visibles = sorted(list(self.lugares_interes_coords.keys()))
         
@@ -56,26 +42,20 @@ class AppEasyRoute:
         self.modo_transporte = tk.StringVar(value="caminar") 
 
         self.root.title("EasyRoute - Navegación Inteligente")
-        self.root.geometry("1100x750") # Ventana un poco más grande
+        self.root.geometry("1100x750")
         self.factor_escala = 1.0
         self.offset_x = 0
         self.offset_y = 0
 
-        # --- 3. CARGA DE IMAGEN (USANDO resolver_ruta) ---
+        # Carga Imagen
         try:
-            # Usamos la función para encontrar la ruta correcta del mapa
-            ruta_mapa_real = resolver_ruta(os.path.join("img", "Mapa.png"))
-            self.img_original = Image.open(ruta_mapa_real)
+            self.img_original = Image.open(os.path.join("img", "Mapa.png"))
             self.ancho_base, self.alto_base = self.img_original.size
-        except Exception as e:
-            print(f"Error cargando imagen: {e}")
-            # Imagen de respaldo (blanca)
+        except:
             self.img_original = Image.new("RGB", (800, 600), "white")
             self.ancho_base, self.alto_base = (800, 600)
 
-        # ==========================================
         # PANEL IZQUIERDO (CONTROLES)
-        # ==========================================
         self.frame_controles = ttk.Frame(self.root, width=320, padding=20)
         self.frame_controles.pack(side="left", fill="y")
         
@@ -83,14 +63,14 @@ class AppEasyRoute:
         lbl_titulo = ttk.Label(self.frame_controles, text="EasyRoute", font=("Segoe UI", 24, "bold"), foreground=ACCENT_COLOR)
         lbl_titulo.pack(pady=(0, 20), anchor="w")
 
-        # --- SECCIÓN 1: HERRAMIENTA DE MARCADO ---
+        # SECCIÓN 1: HERRAMIENTA DE MARCADO
         lf_marcado = ttk.LabelFrame(self.frame_controles, text="📍 Herramienta de Mapa", padding=15)
         lf_marcado.pack(fill="x", pady=(0, 15))
         
         ttk.Radiobutton(lf_marcado, text="Fijar Origen (Click)", variable=self.modo_marcado, value="origen").pack(anchor="w", pady=2)
         ttk.Radiobutton(lf_marcado, text="Fijar Destino (Click)", variable=self.modo_marcado, value="destino").pack(anchor="w", pady=2)
 
-        # --- SECCIÓN 2: PLANIFICADOR ---
+        # SECCIÓN 2: PLANIFICADOR 
         lf_plan = ttk.LabelFrame(self.frame_controles, text="🗺️ Planificar Viaje", padding=15)
         lf_plan.pack(fill="x", pady=(0, 15))
 
@@ -110,7 +90,7 @@ class AppEasyRoute:
         ttk.Radiobutton(lf_plan, text="🚶 Caminar (5 km/h)", variable=self.modo_transporte, value="caminar").pack(anchor="w")
         ttk.Radiobutton(lf_plan, text="🚗 Auto (40 km/h)", variable=self.modo_transporte, value="auto").pack(anchor="w")
 
-        # --- BOTONES DE ACCIÓN ---
+        # BOTONES DE ACCIÓN
         frame_botones = ttk.Frame(self.frame_controles)
         frame_botones.pack(fill="x", pady=(0, 20))
         
@@ -122,7 +102,7 @@ class AppEasyRoute:
         self.btn_limpiar = ttk.Button(frame_botones, text="Limpiar", command=self.limpiar_todo)
         self.btn_limpiar.pack(side="right", fill="x", padx=(5, 0))
 
-        # --- TARJETA DE RESULTADOS (Diseño tipo Card) ---
+        # TARJETA DE RESULTADOS (Diseño tipo Card)
         self.frame_resultado = tk.Frame(self.frame_controles, bg=BG_CARD, bd=1, relief="solid")
         self.frame_resultado.configure(highlightbackground="#cccccc", highlightthickness=1)
         self.frame_resultado.pack(fill="x", ipady=10)
@@ -133,9 +113,7 @@ class AppEasyRoute:
                                       bg=BG_CARD, fg="#444", font=("Segoe UI", 10), justify="center")
         self.lbl_resultado.pack(padx=10, pady=5)
 
-        # ==========================================
         # AREA DEL MAPA (DERECHA)
-        # ==========================================
         self.frame_mapa = ttk.Frame(self.root)
         self.frame_mapa.pack(side="right", fill="both", expand=True)
         
@@ -146,10 +124,10 @@ class AppEasyRoute:
         self.canvas_mapa.bind('<Configure>', self.actualizar_mapa)
         self.canvas_mapa.bind('<Button-1>', self.manejar_clic_mapa)
         
-        # --- EVENTO COMENTADO PARA CLIC DERECHO ---
+        # EVENTO CLIC DERECHO
         # self.canvas_mapa.bind('<Button-3>', self.al_hacer_clic_derecho)
 
-    # --- MÉTODO PARA CLIC DERECHO (COMENTADO) ---
+    # MÉTODO PARA CLIC DERECHO
     # def al_hacer_clic_derecho(self, event):
     #     """Llama a la función externa en utilidades.py"""
     #     coords = obtener_info_coordenada(
@@ -171,10 +149,7 @@ class AppEasyRoute:
     #         self.canvas_mapa.delete("debug_point") # Borra el anterior
     #         self.canvas_mapa.create_oval(fx-3, fy-3, fx+3, fy+3, fill="magenta", outline="white", tags="debug_point")
 
-    # -------------------------------------------------------
     # MÉTODOS DE LÓGICA Y DIBUJADO
-    # -------------------------------------------------------
-
     def formatear_nombre_visual(self, nombre_interno):
         if nombre_interno in self.lugares_interes_coords: return nombre_interno
         partes = nombre_interno.split('_') 
