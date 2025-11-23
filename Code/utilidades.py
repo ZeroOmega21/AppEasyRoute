@@ -1,7 +1,6 @@
 import math
 
 def obtener_info_coordenada(event, offset_x, offset_y, factor_escala, ancho_max, alto_max):
-    """Calcula la coordenada real basada en el clic."""
     clic_x = event.x
     clic_y = event.y
 
@@ -20,6 +19,8 @@ def obtener_info_coordenada(event, offset_x, offset_y, factor_escala, ancho_max,
     return real_x, real_y
 
 def es_zona_protegida(nombre_grupo):
+    """Define qué nombres corresponden a zonas SOLO PEATONALES"""
+    # Agregamos todas las palabras clave posibles
     return ("Parque" in nombre_grupo or 
             "Picnic" in nombre_grupo or 
             "Lago"   in nombre_grupo or 
@@ -27,6 +28,12 @@ def es_zona_protegida(nombre_grupo):
 
 def conectar_tramos_con_sentido(mapa, nodos_calle, coords_calle, nombre_calle, sentidos_dict, tipo_via, escala_metros):
     sentido = sentidos_dict.get(nombre_calle, "DOBLE")
+
+    # REFUERZO DE SEGURIDAD:
+    # Si el nombre tiene "Lago" o "Parque", forzamos a que sea peatonal
+    # independientemente de lo que diga Main.py
+    if es_zona_protegida(nombre_calle):
+        tipo_via = "peatonal"
 
     for i in range(len(nodos_calle) - 1):
         nodo_A = nodos_calle[i]
@@ -63,37 +70,39 @@ def conectar_cruces_inteligentes(mapa, todos_los_nodos, escala_metros):
             grupo_a = nodo_a["grupo"]
             grupo_b = nodo_b["grupo"]
             
-            # --- CAMBIO DE NOMBRE AQUÍ ---
-            es_punto_interes_a = grupo_a == "PUNTO_INTERES"
-            es_punto_interes_b = grupo_b == "PUNTO_INTERES"
+            es_vip_a = grupo_a == "PUNTO_INTERES"
+            es_vip_b = grupo_b == "PUNTO_INTERES"
 
-            # Regla 0: No conectar mismos grupos salvo Puntos de Interés
-            if grupo_a == grupo_b and not es_punto_interes_a:
+            if grupo_a == grupo_b and not es_vip_a:
                 continue
 
-            # Cortafuegos
             es_calle_a = "Calle" in grupo_a or "Av_" in grupo_a or "Pasaje" in grupo_a or "Camino" in grupo_a
             es_calle_b = "Calle" in grupo_b or "Av_" in grupo_b or "Pasaje" in grupo_b or "Camino" in grupo_b
-            es_parque_interno_a = es_zona_protegida(grupo_a) and not es_punto_interes_a
-            es_parque_interno_b = es_zona_protegida(grupo_b) and not es_punto_interes_b
+            
+            es_interno_a = es_zona_protegida(grupo_a) and not es_vip_a
+            es_interno_b = es_zona_protegida(grupo_b) and not es_vip_b
 
-            if (es_calle_a and es_parque_interno_b) or (es_calle_b and es_parque_interno_a):
+            if (es_calle_a and es_interno_b) or (es_calle_b and es_interno_a):
                 continue 
 
-            # Radio dinámico
-            radio_limite = UMBRAL_LUGARES_PX if (es_punto_interes_a or es_punto_interes_b) else UMBRAL_CALLES_PX
-            
+            radio_limite = UMBRAL_LUGARES_PX if (es_vip_a or es_vip_b) else UMBRAL_CALLES_PX
             dist_px = math.sqrt((nodo_a["x"] - nodo_b["x"])**2 + (nodo_a["y"] - nodo_b["y"])**2)
 
             if dist_px < radio_limite:
                 dist_metros = dist_px * escala_metros
                 
-                # Penalización de acceso
-                es_acceso_edificio = (es_punto_interes_a or es_punto_interes_b)
+                es_acceso_edificio = (es_vip_a or es_vip_b)
                 peso_final = dist_metros + (150 if es_acceso_edificio else 0)
+                
+                tipo_conexion = "universal" # Por defecto
+                
+                if es_interno_a or es_interno_b:
+                    tipo_conexion = "peatonal"
 
-                mapa.agregar_arista_doble_sentido(nodo_a["nombre"], nodo_b["nombre"], peso=peso_final, tipo="universal")
+                mapa.agregar_arista_doble_sentido(nodo_a["nombre"], nodo_b["nombre"], peso=peso_final, tipo=tipo_conexion)
                 count_conexiones += 1
+    
+    print(f"--- Mapa listo: {count_conexiones} intersecciones calculadas ---")
     
     print(f"--- Mapa listo: {count_conexiones} intersecciones calculadas ---")
 
