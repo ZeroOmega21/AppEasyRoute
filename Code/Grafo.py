@@ -13,13 +13,10 @@ class Grafo:
 
     def agregar_arista(self, origen, destino, peso, tipo="universal"):
         """
-        tipo: 'universal' (autos y peatones) o 'peatonal' (solo peatones)
+        peso: Distancia en METROS REALES
         """
-        # Aseguramos que existan los nodos
         if origen not in self.adyacencia: self.agregar_nodo(origen)
         if destino not in self.adyacencia: self.agregar_nodo(destino)
-
-        # Guardamos la conexión con su TIPO
         self.adyacencia[origen].append((destino, peso, tipo))
 
     def agregar_arista_doble_sentido(self, nodo_a, nodo_b, peso, tipo="universal"):
@@ -42,53 +39,55 @@ class Grafo:
                 nodo_mas_cercano = nodo
         return nodo_mas_cercano, distancia_minima
 
-    # --- DIJKSTRA MEJORADO ---
     def dijkstra(self, nodo_inicio, nodo_fin, modo_transporte="caminar"):
-        """
-        modo_transporte: 'auto' o 'caminar'
-        """
-        distancias = {nodo: float('inf') for nodo in self.adyacencia}
-        distancias[nodo_inicio] = 0
+        # --- VELOCIDADES EN METROS POR MINUTO ---
+        # Caminar promedio: 5 km/h = 83 m/min
+        # Auto ciudad: 40 km/h = 666 m/min
+        VELOCIDAD_CAMINAR = 83.0  
+        VELOCIDAD_AUTO    = 666.0 
+
+        tiempos = {nodo: float('inf') for nodo in self.adyacencia}
+        tiempos[nodo_inicio] = 0
         predecesores = {nodo: None for nodo in self.adyacencia}
         cola_prioridad = [(0, nodo_inicio)]
 
         while cola_prioridad:
-            distancia_actual, nodo_actual = heapq.heappop(cola_prioridad)
+            tiempo_actual, nodo_actual = heapq.heappop(cola_prioridad)
 
             if nodo_actual == nodo_fin:
                 break
 
-            if distancia_actual > distancias[nodo_actual]:
+            if tiempo_actual > tiempos[nodo_actual]:
                 continue
 
-            # Iteramos sobre los vecinos
-            for vecino, peso, tipo_via in self.adyacencia[nodo_actual]:
+            for vecino, distancia_metros, tipo_via in self.adyacencia[nodo_actual]:
                 
-                # --- REGLA DE BLOQUEO ---
-                # Si voy en AUTO y la calle es PEATONAL, no puedo pasar.
+                # 1. BLOQUEO DE AUTO EN PARQUE
                 if modo_transporte == "auto" and tipo_via == "peatonal":
                     continue 
                 
-                # (Opcional) Si vas en auto por calle normal, cuesta menos tiempo (es más rápido)
-                costo_tramo = peso
-                if modo_transporte == "auto" and tipo_via == "universal":
-                    costo_tramo = peso / 3  # El auto es 3 veces más rápido
+                # 2. DEFINIR VELOCIDAD
+                velocidad = VELOCIDAD_CAMINAR
+                if modo_transporte == "auto":
+                    velocidad = VELOCIDAD_AUTO
                 
-                nueva_distancia = distancia_actual + costo_tramo
+                # 3. TIEMPO = DISTANCIA (m) / VELOCIDAD (m/min)
+                tiempo_tramo = distancia_metros / velocidad
+                
+                nuevo_tiempo = tiempo_actual + tiempo_tramo
 
-                if nueva_distancia < distancias[vecino]:
-                    distancias[vecino] = nueva_distancia
+                if nuevo_tiempo < tiempos[vecino]:
+                    tiempos[vecino] = nuevo_tiempo
                     predecesores[vecino] = nodo_actual
-                    heapq.heappush(cola_prioridad, (nueva_distancia, vecino))
+                    heapq.heappush(cola_prioridad, (nuevo_tiempo, vecino))
 
-        # Reconstruir ruta
         ruta = []
         actual = nodo_fin
-        if distancias[nodo_fin] == float('inf'):
-            return [], float('inf') # No hay camino
+        if tiempos[nodo_fin] == float('inf'):
+            return [], float('inf')
 
         while actual is not None:
             ruta.insert(0, actual)
             actual = predecesores[actual]
 
-        return ruta, distancias[nodo_fin]
+        return ruta, tiempos[nodo_fin]
