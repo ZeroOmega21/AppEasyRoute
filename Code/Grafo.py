@@ -68,7 +68,6 @@ class Grafo:
                         elif afectados == "peaton":
                             nuevo_tipo = "solo_auto"  # Prohibido peatones
                     else:
-                        # --- DESBLOQUEAR (RESTAURAR) ---
                         # 1. Restaurar Peso
                         if destino in self.coordenadas:
                             x1, y1 = self.coordenadas[nodo_origen]
