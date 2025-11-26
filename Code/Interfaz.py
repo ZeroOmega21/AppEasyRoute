@@ -52,10 +52,26 @@ class AppEasyRoute:
         self.offset_x = 0
         self.offset_y = 0
 
+        # --- CARGA DE IMAGEN A PRUEBA DE FALLOS ---
         try:
-            self.img_original = Image.open(os.path.join("img", "Mapa.png"))
+            # Intento 1: Ruta Absoluta (La más segura generalmente)
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            ruta_imagen = os.path.join(base_path, "img", "Mapa.png")
+            
+            # Intento 2: Si la ruta tiene caracteres raros, probamos ruta relativa simple
+            if not os.path.exists(ruta_imagen):
+                ruta_imagen = "img/Mapa.png"
+
+            print(f"[INFO] Cargando mapa...") 
+
+            self.img_original = Image.open(ruta_imagen)
             self.ancho_base, self.alto_base = self.img_original.size
-        except:
+        
+        except Exception as e:
+            # --- CORRECCIÓN: Sin emojis para evitar crash en Windows ---
+            print(f"[ERROR GRAVE] No se pudo cargar la imagen. Detalle: {e}")
+            
+            # Crear imagen de respaldo blanca para que la app ABRA igual
             self.img_original = Image.new("RGB", (800, 600), "white")
             self.ancho_base, self.alto_base = (800, 600)
 
@@ -123,6 +139,19 @@ class AppEasyRoute:
         
         self.canvas_mapa.bind('<Configure>', self.actualizar_mapa)
         self.canvas_mapa.bind('<Button-1>', self.manejar_clic_mapa)
+        
+        # EVENTO CLIC DERECHO (Comentado)
+        # self.canvas_mapa.bind('<Button-3>', self.al_hacer_clic_derecho)
+
+    # --- MÉTODO PARA CLIC DERECHO (COMENTADO) ---
+    # def al_hacer_clic_derecho(self, event):
+    #     coords = obtener_info_coordenada(event, self.offset_x, self.offset_y, self.factor_escala, self.ancho_base, self.alto_base)
+    #     if coords:
+    #         rx, ry = coords
+    #         fx = (rx * self.factor_escala) + self.offset_x
+    #         fy = (ry * self.factor_escala) + self.offset_y
+    #         self.canvas_mapa.delete("debug_point") 
+    #         self.canvas_mapa.create_oval(fx-3, fy-3, fx+3, fy+3, fill="magenta", outline="white", tags="debug_point")
 
     # ===========================================================
     # VENTANA LISTA DE INCIDENTES
@@ -157,7 +186,9 @@ class AppEasyRoute:
         txt_lista.tag_config("detalle", foreground="#555", font=("Segoe UI", 10, "italic"))
         txt_lista.config(state="disabled")
 
+    # ===========================================================
     # LÓGICA DE CLICS EN EL MAPA
+    # ===========================================================
     def manejar_clic_mapa(self, event):
         try:
             rx = int((event.x - self.offset_x) / self.factor_escala)
@@ -190,11 +221,13 @@ class AppEasyRoute:
         destino = self.nodo_destino_clic if self.nodo_destino_clic else self.combo_destino.get()
         if origen and destino: self.buscar_ruta_presionado()
 
+    # ===========================================================
     # VENTANA DE REPORTES
+    # ===========================================================
     def abrir_ventana_reportes(self, calle_preseleccionada=None, coord_reporte=None):
         ventana = Toplevel(self.root)
         ventana.title("Reportar Incidente")
-        ventana.geometry("480x680") # Más alta para el separador
+        ventana.geometry("480x680") 
         ventana.configure(bg="white")
         
         tk.Label(ventana, text="📢 Nuevo Reporte", bg="white", fg="#333", font=("Segoe UI", 16, "bold")).pack(pady=(20, 5))
@@ -305,18 +338,22 @@ class AppEasyRoute:
             self.redibujar_todo()
             if self.ruta_actual: self.buscar_ruta_presionado()
 
+        # --- BOTONES ACCIÓN CON SEPARADOR AZUL ---
         frame_btns = tk.Frame(ventana, bg="white")
         frame_btns.pack(pady=10, fill="x", padx=40)
 
         tk.Button(frame_btns, text="⛔ Reportar Bloqueo", bg="#d9534f", fg="white", 
                   font=("Segoe UI", 10, "bold"), relief="flat", pady=10, command=reportar_bloqueo).pack(fill="x")
 
+        # Franja separadora azul
         tk.Frame(frame_btns, height=2, bg="#007AFF").pack(fill="x", pady=15)
 
         tk.Button(frame_btns, text="✅ Reportar Vía Despejada", bg="#28a745", fg="white", 
                   font=("Segoe UI", 10, "bold"), relief="flat", pady=10, command=reportar_despejado).pack(fill="x")
 
+    # -------------------------------------------------------
     # MÉTODOS RESTANTES IGUALES
+    # -------------------------------------------------------
     def formatear_nombre_visual(self, nombre_interno):
         if nombre_interno in self.lugares_interes_coords: return nombre_interno
         partes = nombre_interno.split('_') 
