@@ -157,9 +157,7 @@ class AppEasyRoute:
         txt_lista.tag_config("detalle", foreground="#555", font=("Segoe UI", 10, "italic"))
         txt_lista.config(state="disabled")
 
-    # ===========================================================
     # LÓGICA DE CLICS EN EL MAPA
-    # ===========================================================
     def manejar_clic_mapa(self, event):
         try:
             rx = int((event.x - self.offset_x) / self.factor_escala)
@@ -192,9 +190,7 @@ class AppEasyRoute:
         destino = self.nodo_destino_clic if self.nodo_destino_clic else self.combo_destino.get()
         if origen and destino: self.buscar_ruta_presionado()
 
-    # ===========================================================
     # VENTANA DE REPORTES
-    # ===========================================================
     def abrir_ventana_reportes(self, calle_preseleccionada=None, coord_reporte=None):
         ventana = Toplevel(self.root)
         ventana.title("Reportar Incidente")
@@ -309,22 +305,18 @@ class AppEasyRoute:
             self.redibujar_todo()
             if self.ruta_actual: self.buscar_ruta_presionado()
 
-        # --- BOTONES ACCIÓN CON SEPARADOR AZUL ---
         frame_btns = tk.Frame(ventana, bg="white")
         frame_btns.pack(pady=10, fill="x", padx=40)
 
         tk.Button(frame_btns, text="⛔ Reportar Bloqueo", bg="#d9534f", fg="white", 
                   font=("Segoe UI", 10, "bold"), relief="flat", pady=10, command=reportar_bloqueo).pack(fill="x")
 
-        # LA FRANJA AZUL SEPARADORA
         tk.Frame(frame_btns, height=2, bg="#007AFF").pack(fill="x", pady=15)
 
         tk.Button(frame_btns, text="✅ Reportar Vía Despejada", bg="#28a745", fg="white", 
                   font=("Segoe UI", 10, "bold"), relief="flat", pady=10, command=reportar_despejado).pack(fill="x")
 
-    # -------------------------------------------------------
     # MÉTODOS RESTANTES IGUALES
-    # -------------------------------------------------------
     def formatear_nombre_visual(self, nombre_interno):
         if nombre_interno in self.lugares_interes_coords: return nombre_interno
         partes = nombre_interno.split('_') 
